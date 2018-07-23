@@ -1,0 +1,9 @@
+class FirstContact {
+    static buildContract () {
+        let abi = [ { "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" }, { "anonymous": false, "inputs": [ { "indexed": true, "name": "username", "type": "bytes32" }, { "indexed": false, "name": "publicAddress", "type": "address" }, { "indexed": false, "name": "fee", "type": "uint256" }, { "indexed": false, "name": "linkedinUrl", "type": "string" } ], "name": "LogUserAdded", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": true, "name": "fromUsername", "type": "bytes32" }, { "indexed": true, "name": "toUsername", "type": "bytes32" }, { "indexed": false, "name": "text", "type": "string" } ], "name": "LogMessageSent", "type": "event" }, { "constant": true, "inputs": [ { "name": "username", "type": "bytes32" } ], "name": "isUsernameTaken", "outputs": [ { "name": "", "type": "bool" } ], "payable": false, "stateMutability": "view", "type": "function" }, { "constant": false, "inputs": [ { "name": "username", "type": "bytes32" }, { "name": "fee", "type": "uint256" }, { "name": "linkedinUrl", "type": "string" }, { "name": "publicAddress", "type": "address" } ], "name": "registerUser", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" }, { "constant": false, "inputs": [ { "name": "toUsername", "type": "bytes32" }, { "name": "text", "type": "string" } ], "name": "sendMessage", "outputs": [], "payable": true, "stateMutability": "payable", "type": "function" } ]
+        let address = '0x345ca3e014aaf5dca488057592ee47305d9b3e10'
+        let contract = web3.eth.contract(abi).at(address)
+
+        return contract
+    }
+}

@@ -1,0 +1,84 @@
+.hidden {
+    display: none !important;
+}
+
+.register-screen .form-container {
+    border: 1px solid rgba(95,95,95,.78);
+    padding: 20px;
+    display: inline-block;
+}
+
+.my-profile {
+    border: 1px solid rgba(95,95,95,.78);
+    padding: 20px;
+    display: inline-block;
+}
+
+.messages {
+    margin-top: 30px;
+    border: 1px solid rgba(95,95,95,.78);
+}
+
+.messages-contacts {
+    padding: 20px;
+    border-right: 1px solid rgba(95,95,95,.78);
+}
+
+.thread-title {
+    padding: 20px;
+}
+
+.thread-reply {
+    border-top: 1px solid rgba(95,95,95,.78);
+    padding: 20px;
+}
+
+.thread-reply .form-group {
+    margin-bottom: 0.5rem;
+}
+
+.thread-list {
+    border-top: 1px solid rgba(95,95,95,.78);
+    padding: 20px;
+}
+
+.contact-user {
+    padding: 5px;
+    border-bottom: 1px solid rgba(95,95,95,.78);
+    cursor: pointer;
+}
+
+.contact-user:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.contact-user--selected {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.contact-user.contact-user--selected:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.thread-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.message {
+    display: inline-block;
+    padding: 10px 15px;
+    border-radius: 20px;
+    background: darkgoldenrod;
+    max-width: 350px;
+    margin: 10px 0;
+}
+
+.message--left {
+    align-self: flex-start;
+    background: slateblue;
+}
+
+.message--right {
+    align-self: flex-end;
+}

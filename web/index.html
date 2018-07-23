@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>First Contact</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hack/0.8.1/hack.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hack/0.8.1/dark.css">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="hack dark container">
+    <h1>First Contact</h1>
+    <p>Charge a fee to receive messages.</p>
+    <br>
+
+    <div class="info-message"></div>
+
+    <div class="register-screen hidden">
+        <h2>Register</h2>
+
+        <div class="form-container">
+            <form class="form js-registerForm">
+                <fieldset class="form-group">
+                    <label for="username">USERNAME:</label>
+                    <input id="username" type="text" placeholder="type your name..." class="form-control">
+                </fieldset>
+                <fieldset class="form-group">
+                    <label for="linkedin">LINKEDIN:</label>
+                    <input id="linkedin" type="text" placeholder="your linkedin url..." class="form-control">
+                </fieldset>
+                <fieldset class="form-group">
+                    <label for="fee">ETH FEE:</label>
+                    <input id="fee" type="text" placeholder="how much you want to charge per message..." class="form-control">
+                </fieldset>
+                <fieldset class="form-group">
+                    <label for="publicAddress">PUBLIC ADDRESS:</label>
+                    <input id="publicAddress" type="text" placeholder="your eth address..." class="form-control">
+                </fieldset>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary btn-block js-registerButton">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="messages-screen hidden">
+        <h2>Messages</h2>
+        <div class="my-profile">
+            <h3>My Profile</h3>
+            <div>
+                <a target="_blank" href="" class="js-myProfile-username"></a>
+            </div>
+            <div class="js-myProfile-publicAddress"></div>
+            <div class="js-myProfile-balance"></div>
+        </div>
+
+        <div class="messages grid">
+            <div class="cell -3of12 messages-contacts">
+                <div class="contacts-title">Contacts</div>
+                <div class="contacts-list"></div>
+            </div>
+            <div class="cell -9of12 messages-thread">
+                    <div class="thread-title">Conversation</div>
+                    <div class="thread-list hidden js-threadList">
+                        No messages
+                    </div>
+                    <div class="thread-reply hidden js-threadReply grid">
+                        <form class="form">
+                            <fieldset class="form-group">
+                                <label for="message">MESSAGE:</label>
+                                <input id="message" type="text" placeholder="type your message..." class="form-control">
+                            </fieldset>
+                        </form>
+                        <button class="btn btn-primary js-sendButton">Send</button>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./utils.js"></script>
+    <script src="./first-contact.js"></script>
+    <script>
+        const $ = document.querySelector.bind(document)
+        
+        const $registerScreen = $('.register-screen')
+        const $messagesScreen = $('.messages-screen')
+        const $registerForm = $('.js-registerForm')
+        const $registerButton = $('.js-registerButton')
+
+        const $myProfileUsername = $('.js-myProfile-username')
+        const $myProfilePublicAddress = $('.js-myProfile-publicAddress')
+        const $myProfileBalance = $('.js-myProfile-balance')
+        
+        const $contactList = $('.contacts-list')
+        const $threadList = $('.js-threadList')
+        const $threadReply = $('.js-threadReply')
+        const $sendButton = $('.js-sendButton')
+        const $message = $('#message')
+
+        const infoMessage = new InfoMessage('.info-message')
+
+        let messages = []
+
+        const firstContact = FirstContact.buildContract()
+        let fromMeEvents
+        let toMeEvents
+
+        function registerUser () {
+            let username = $registerForm.querySelector('#username').value
+            let linkedin = $registerForm.querySelector('#linkedin').value
+            let fee = $registerForm.querySelector('#fee').value
+            let feeInWei = web3.toWei(fee, 'ether')
+            let publicAddress = web3.eth.accounts[0]
+            
+            Loader.start($registerButton)
+
+            firstContact.isUsernameTaken.call(
+                username,
+                (err, isTaken) => {
+                    if (!isTaken) {
+                        firstContact
+                            .registerUser(
+                                username, feeInWei, linkedin, publicAddress,
+                                { from: publicAddress },
+                                (err, data) => {
+                                    if (err) {
+                                        infoMessage.error(err)
+                                        Loader.stop($registerButton) 
+                                        return
+                                    }
+
+                                    saveUser({
+                                        username,
+                                        linkedin,
+                                        fee,
+                                        publicAddress
+                                    })
+                                    Loader.stop($registerButton) 
+                                    infoMessage.success('Successfully registered!')
+                                }
+                            )
+                    } else {
+                        Loader.stop($registerButton) 
+                        infoMessage.error('That username is already taken!')
+                    }
+                }
+            )
+        }
+
+        function displayProfile () {
+            let user = getUser(web3.eth.accounts[0])
+            $myProfileUsername.innerHTML = user.username
+            $myProfileUsername.setAttribute('href', user.linkedin)
+            $myProfilePublicAddress.innerHTML = user.publicAddress
+
+            web3.eth
+                .getBalance(web3.eth.accounts[0], (err, balance) => {
+                    $myProfileBalance.innerHTML = `${web3.fromWei(balance)} ETH`
+                })
+        }
+
+        function renderMessage (message) {
+            let side = message.fromUsername === getUser(web3.eth.accounts[0]).username
+                ? 'right' : 'left'
+
+            let $messageElement = document.createElement('div')
+            $messageElement.innerHTML = message.text
+            $messageElement.classList.add('message', `message--${side}`)
+
+            return $messageElement
+        }
+
+        function renderMessages () {
+            let $messages = messages.map(m => renderMessage(m))
+
+            $threadList.innerHTML = '';
+            [...$messages].forEach($m => $threadList.appendChild($m))
+        }
+
+        function onMessage (error, event) {
+            let { fromUsername, toUsername, text } = event.args
+            let cleanFromUsername = cleanBytes32String(web3.toAscii(fromUsername))
+            let cleanToUsername = cleanBytes32String(web3.toAscii(toUsername))
+
+            messages.push({
+                fromUsername: cleanFromUsername,
+                toUsername: cleanToUsername,
+                text,
+                blockNumber: event.blockNumber
+            })
+
+            messages.sort((m1, m2) => m1.blockNumber > m2.blockNumber ? 1 : -1)
+            renderMessages()
+        }
+
+        function loadThread (user) {
+            $threadList.classList.remove('hidden')
+            $threadReply.classList.remove('hidden')
+
+            $threadList.innerHTML = ''
+
+            let myUsername = getUser(web3.eth.accounts[0]).username
+
+            messages = []
+            
+            if (fromMeEvents && toMeEvents) {
+                fromMeEvents.stopWatching()
+                toMeEvents.stopWatching()
+            }
+
+            fromMeEvents = firstContact
+                .LogMessageSent({
+                    fromUsername: myUsername,
+                    toUsername: user.username
+                }, { fromBlock: 0, toBlock: 'latest' }, onMessage)
+            
+            toMeEvents = firstContact
+                .LogMessageSent({
+                    fromUsername: user.username,
+                    toUsername: myUsername
+                }, { fromBlock: 0, toBlock: 'latest' }, onMessage)
+        }
+
+        function onUserSelected(userElement, user) {
+            [...document.querySelectorAll('.contact-user')].forEach(el => el.classList.remove('contact-user--selected'))
+            userElement.classList.add('contact-user--selected')
+
+            loadThread(user)
+        }
+
+        function renderUser ({ username, fee, linkedinUrl, publicAddress }) {
+            let $user = document.createElement('div')
+            
+            let $userName = document.createElement('div')
+            $userName.innerHTML = `<a href="${linkedinUrl}" target="_blank">${username}</a>`
+            
+            let $userFee = document.createElement('div')
+            $userFee.innerHTML = `Fee: ${fee} ETH`
+
+            $user.classList.add('contact-user')
+            $user.dataset.username = username
+            $user.dataset.fee = fee
+
+            $user.appendChild($userName)
+            $user.appendChild($userFee)
+
+            $user.addEventListener('click', () => onUserSelected($user, { username, fee, linkedinUrl, publicAddress }))
+
+            return $user
+        }
+
+        function appendUser ({ username, fee, linkedinUrl, publicAddress }) {
+            let $newUser = renderUser({ username, fee, linkedinUrl, publicAddress })
+            $contactList.prepend($newUser)
+        }
+
+        function loadUsers () {
+            firstContact
+                .LogUserAdded({}, { fromBlock: 0, toBlock: 'latest' }, (error, event) => {
+                    let { fee, publicAddress, linkedinUrl, username } = event.args
+                    let usernameFormatted = cleanBytes32String(web3.toAscii(username))
+                    let feeNumber = web3.fromWei(fee)
+
+                    if (usernameFormatted !== getUser(web3.eth.accounts[0]).username) {
+                        appendUser({ username: usernameFormatted, fee: feeNumber, linkedinUrl, publicAddress })
+                    }
+                })
+        }
+
+        function sendMessage () {
+            let message = $message.value
+            let currentUser = $('.contact-user--selected').dataset.username
+            let fee = $('.contact-user--selected').dataset.fee
+
+            Loader.start($sendButton)
+
+            firstContact
+                .sendMessage(
+                    currentUser, message,
+                    { from: web3.eth.accounts[0], value: web3.toWei(fee, 'ether') },
+                    (err, data) => {
+                        $message.value = ''
+                        Loader.stop($sendButton)
+                    }
+                )
+        }
+
+        document.body.onload = () => {
+            if (isUserLoggedIn(web3.eth.accounts[0])) {
+                displayProfile()
+                $messagesScreen.classList.remove('hidden')
+
+                loadUsers()
+
+                $sendButton.addEventListener('click', () => sendMessage())
+            } else {
+                $registerScreen.classList.remove('hidden')
+                $registerButton.addEventListener('click', () => registerUser())
+
+                $registerForm.querySelector('#publicAddress').value = web3.eth.accounts[0]
+            }
+        }
+    </script>
+</body>
+</html>
